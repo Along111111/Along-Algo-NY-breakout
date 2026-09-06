@@ -1,0 +1,780 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AlgoNY — Automated Trading Bot</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --black: #080C08;
+  --white: #F2F5F0;
+  --green: #00FF41;
+  --green-dim: #00C832;
+  --green-glow: rgba(0,255,65,0.12);
+  --grey: #1A1F1A;
+  --grey-mid: #2A302A;
+  --grey-text: #6B7A6B;
+  --red: #FF3B3B;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--black);
+  color: var(--white);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+}
+
+/* GRID OVERLAY */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,255,65,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,255,65,0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* NAV */
+nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  padding: 20px 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  border-bottom: 1px solid rgba(0,255,65,0.08);
+  background: rgba(8,12,8,0.85);
+  backdrop-filter: blur(12px);
+}
+
+.logo {
+  font-family: 'Space Mono', monospace;
+  font-size: 18px;
+  color: var(--green);
+  letter-spacing: -0.02em;
+}
+
+.nav-cta {
+  background: var(--green);
+  color: var(--black);
+  padding: 10px 24px;
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: none;
+  font-family: 'Space Mono', monospace;
+  transition: opacity 0.15s;
+}
+
+.nav-cta:hover { opacity: 0.85; }
+
+/* HERO */
+.hero {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 120px 40px 80px;
+  position: relative;
+  z-index: 1;
+  max-width: 900px;
+}
+
+.hero-tag {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: var(--green);
+  letter-spacing: 0.15em;
+  margin-bottom: 32px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.hero-tag::before {
+  content: '';
+  width: 24px;
+  height: 1px;
+  background: var(--green);
+}
+
+.hero h1 {
+  font-size: clamp(48px, 7vw, 96px);
+  font-weight: 700;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+  margin-bottom: 32px;
+  color: var(--white);
+}
+
+.hero h1 span {
+  color: var(--green);
+  display: block;
+}
+
+.hero-sub {
+  font-size: 18px;
+  color: var(--grey-text);
+  max-width: 520px;
+  margin-bottom: 48px;
+  line-height: 1.7;
+  font-weight: 300;
+}
+
+.hero-actions {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.btn-primary {
+  background: var(--green);
+  color: var(--black);
+  padding: 16px 36px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  font-family: 'Space Mono', monospace;
+  display: inline-block;
+  transition: opacity 0.15s;
+}
+
+.btn-primary:hover { opacity: 0.85; }
+
+.btn-ghost {
+  color: var(--grey-text);
+  font-size: 13px;
+  font-family: 'Space Mono', monospace;
+  text-decoration: none;
+  border-bottom: 1px solid var(--grey-mid);
+  padding-bottom: 2px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.btn-ghost:hover { color: var(--white); border-color: var(--white); }
+
+/* LIVE TICKER */
+.ticker {
+  position: relative;
+  z-index: 1;
+  border-top: 1px solid rgba(0,255,65,0.12);
+  border-bottom: 1px solid rgba(0,255,65,0.12);
+  padding: 14px 0;
+  overflow: hidden;
+  background: rgba(0,255,65,0.02);
+}
+
+.ticker-track {
+  display: flex;
+  gap: 60px;
+  animation: ticker 25s linear infinite;
+  white-space: nowrap;
+}
+
+@keyframes ticker {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.ticker-item {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.ticker-asset { color: var(--grey-text); }
+.ticker-pos { color: var(--green); }
+.ticker-neg { color: var(--red); }
+
+/* STATS */
+.stats {
+  position: relative;
+  z-index: 1;
+  padding: 100px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.stats-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: var(--green);
+  letter-spacing: 0.15em;
+  margin-bottom: 60px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.stats-label::before {
+  content: '';
+  width: 24px;
+  height: 1px;
+  background: var(--green);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: rgba(0,255,65,0.08);
+  border: 1px solid rgba(0,255,65,0.08);
+}
+
+.stat-item {
+  padding: 40px 32px;
+  background: var(--black);
+}
+
+.stat-num {
+  font-family: 'Space Mono', monospace;
+  font-size: clamp(32px, 4vw, 52px);
+  color: var(--green);
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 8px;
+}
+
+.stat-desc {
+  font-size: 13px;
+  color: var(--grey-text);
+  line-height: 1.5;
+}
+
+/* WEEKLY */
+.weekly {
+  position: relative;
+  z-index: 1;
+  padding: 0 40px 100px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.section-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  color: var(--green);
+  letter-spacing: 0.15em;
+  margin-bottom: 40px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-label::before {
+  content: '';
+  width: 24px;
+  height: 1px;
+  background: var(--green);
+}
+
+.weeks-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1px;
+  background: rgba(0,255,65,0.08);
+  border: 1px solid rgba(0,255,65,0.08);
+  margin-bottom: 40px;
+}
+
+.week-card {
+  padding: 32px 24px;
+  background: var(--black);
+}
+
+.week-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 10px;
+  color: var(--grey-text);
+  letter-spacing: 0.1em;
+  margin-bottom: 16px;
+}
+
+.week-pnl {
+  font-family: 'Space Mono', monospace;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--green);
+  margin-bottom: 6px;
+}
+
+.week-pnl.neg { color: var(--red); }
+
+.week-detail {
+  font-size: 12px;
+  color: var(--grey-text);
+  line-height: 1.6;
+}
+
+/* ASSETS */
+.assets {
+  position: relative;
+  z-index: 1;
+  padding: 0 40px 100px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.asset-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: 'Space Mono', monospace;
+  font-size: 13px;
+}
+
+.asset-table th {
+  text-align: left;
+  padding: 12px 16px;
+  font-size: 10px;
+  color: var(--grey-text);
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid rgba(0,255,65,0.12);
+}
+
+.asset-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  color: var(--white);
+}
+
+.asset-table tr:hover td { background: rgba(0,255,65,0.03); }
+
+.tag-both { color: var(--green); }
+.tag-long { color: #7FD4A0; }
+.pnl-pos { color: var(--green); }
+.dot-active {
+  display: inline-block;
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* HOW IT WORKS */
+.how {
+  position: relative;
+  z-index: 1;
+  padding: 0 40px 100px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.steps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: rgba(0,255,65,0.08);
+  border: 1px solid rgba(0,255,65,0.08);
+}
+
+.step {
+  padding: 40px 32px;
+  background: var(--black);
+}
+
+.step-n {
+  font-family: 'Space Mono', monospace;
+  font-size: 48px;
+  color: rgba(0,255,65,0.12);
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 20px;
+}
+
+.step-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 10px;
+  color: var(--white);
+}
+
+.step-desc {
+  font-size: 13px;
+  color: var(--grey-text);
+  line-height: 1.7;
+}
+
+/* PRICING */
+.pricing {
+  position: relative;
+  z-index: 1;
+  padding: 0 40px 100px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.plans {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: rgba(0,255,65,0.08);
+  border: 1px solid rgba(0,255,65,0.08);
+}
+
+.plan {
+  padding: 40px 32px;
+  background: var(--black);
+  position: relative;
+}
+
+.plan.featured {
+  background: rgba(0,255,65,0.05);
+}
+
+.plan-badge {
+  font-family: 'Space Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--black);
+  background: var(--green);
+  padding: 4px 10px;
+  display: inline-block;
+  margin-bottom: 20px;
+}
+
+.plan-name {
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  color: var(--grey-text);
+  letter-spacing: 0.1em;
+  margin-bottom: 12px;
+}
+
+.plan-price {
+  font-family: 'Space Mono', monospace;
+  font-size: 48px;
+  font-weight: 700;
+  color: var(--white);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.plan-period {
+  font-size: 12px;
+  color: var(--grey-text);
+  margin-bottom: 28px;
+}
+
+.plan-features {
+  list-style: none;
+  margin-bottom: 32px;
+}
+
+.plan-features li {
+  font-size: 13px;
+  color: var(--grey-text);
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.04);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.plan-features li::before {
+  content: '→';
+  color: var(--green);
+  font-family: 'Space Mono', monospace;
+  font-size: 11px;
+  flex-shrink: 0;
+}
+
+.plan-cta {
+  display: block;
+  text-align: center;
+  padding: 14px;
+  font-family: 'Space Mono', monospace;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid rgba(0,255,65,0.3);
+  color: var(--green);
+  transition: all 0.15s;
+}
+
+.plan-cta:hover, .plan.featured .plan-cta {
+  background: var(--green);
+  color: var(--black);
+  border-color: var(--green);
+}
+
+/* DISCLAIMER */
+.disclaimer {
+  position: relative;
+  z-index: 1;
+  padding: 0 40px 40px;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.disclaimer p {
+  font-size: 11px;
+  color: var(--grey-text);
+  line-height: 1.7;
+  border-left: 2px solid rgba(0,255,65,0.15);
+  padding-left: 16px;
+}
+
+/* FOOTER */
+footer {
+  position: relative;
+  z-index: 1;
+  padding: 40px;
+  border-top: 1px solid rgba(0,255,65,0.08);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.footer-logo {
+  font-family: 'Space Mono', monospace;
+  font-size: 14px;
+  color: var(--green);
+}
+
+.footer-copy {
+  font-size: 12px;
+  color: var(--grey-text);
+  font-family: 'Space Mono', monospace;
+}
+
+/* RESPONSIVE */
+@media (max-width: 768px) {
+  nav { padding: 16px 20px; }
+  .hero { padding: 100px 20px 60px; }
+  .hero h1 { font-size: 48px; }
+  .stats, .weekly, .assets, .how, .pricing, .disclaimer, footer { padding-left: 20px; padding-right: 20px; }
+  .stats-grid, .weeks-grid, .steps, .plans { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+  .stats-grid, .weeks-grid, .steps, .plans { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">ALGONY</div>
+  <a href="https://t.me/Along1111" target="_blank" class="nav-cta">Start Now</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-tag">Live since 2025 · 10 assets · NY open strategy</div>
+  <h1>
+    Your money works.
+    <span>You don't.</span>
+  </h1>
+  <p class="hero-sub">Automated trading bot running 24/7 on 10 asset classes. NY open breakout strategy. Real results, every week, fully managed on our server.</p>
+  <div class="hero-actions">
+    <a href="https://t.me/Along1111" target="_blank" class="btn-primary">Get Started — from €19/mo</a>
+    <a href="#results" class="btn-ghost">See live results →</a>
+  </div>
+</section>
+
+<!-- TICKER -->
+<div class="ticker">
+  <div class="ticker-track">
+    <span class="ticker-item"><span class="ticker-asset">MSTR</span><span class="ticker-pos">+133.6%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">COIN</span><span class="ticker-pos">+88.8%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">ZEC</span><span class="ticker-pos">+87.4%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">SOL</span><span class="ticker-pos">+59.6%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">ADA</span><span class="ticker-pos">+60.8%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">HOOD</span><span class="ticker-pos">+42.3%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">ETH</span><span class="ticker-pos">+37.6%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">SUI</span><span class="ticker-pos">+69.2%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">TSLA</span><span class="ticker-pos">+18.3%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">GOOGL</span><span class="ticker-pos">+12.4%</span></span>
+    <!-- repeat for seamless loop -->
+    <span class="ticker-item"><span class="ticker-asset">MSTR</span><span class="ticker-pos">+133.6%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">COIN</span><span class="ticker-pos">+88.8%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">ZEC</span><span class="ticker-pos">+87.4%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">SOL</span><span class="ticker-pos">+59.6%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">ADA</span><span class="ticker-pos">+60.8%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">HOOD</span><span class="ticker-pos">+42.3%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">ETH</span><span class="ticker-pos">+37.6%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">SUI</span><span class="ticker-pos">+69.2%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">TSLA</span><span class="ticker-pos">+18.3%</span></span>
+    <span class="ticker-item"><span class="ticker-asset">GOOGL</span><span class="ticker-pos">+12.4%</span></span>
+  </div>
+</div>
+
+<!-- STATS -->
+<section class="stats" id="results">
+  <div class="stats-label">Live performance</div>
+  <div class="stats-grid">
+    <div class="stat-item">
+      <div class="stat-num">$1,637</div>
+      <div class="stat-desc">Net profit last week<br>$3,300 margin deployed</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">10</div>
+      <div class="stat-desc">Asset classes running<br>simultaneously, automated</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">57%</div>
+      <div class="stat-desc">Win rate last week<br>20 wins from 35 trades</div>
+    </div>
+    <div class="stat-item">
+      <div class="stat-num">+545%</div>
+      <div class="stat-desc">Total ROI last week<br>across all positions</div>
+    </div>
+  </div>
+</section>
+
+<!-- WEEKLY RESULTS -->
+<section class="weekly">
+  <div class="section-label">Weekly track record</div>
+  <div class="weeks-grid">
+    <div class="week-card">
+      <div class="week-label">WEEK 1</div>
+      <div class="week-pnl">+$—</div>
+      <div class="week-detail">Coming soon<br>Update weekly</div>
+    </div>
+    <div class="week-card">
+      <div class="week-label">WEEK 2</div>
+      <div class="week-pnl">+$—</div>
+      <div class="week-detail">Coming soon<br>Update weekly</div>
+    </div>
+    <div class="week-card">
+      <div class="week-label">WEEK 3</div>
+      <div class="week-pnl">+$—</div>
+      <div class="week-detail">Coming soon<br>Update weekly</div>
+    </div>
+    <div class="week-card">
+      <div class="week-label">AUG 31 – SEP 4</div>
+      <div class="week-pnl">+$1,637</div>
+      <div class="week-detail">35 trades · 10 assets<br>Best: MSTR +133%</div>
+    </div>
+  </div>
+</section>
+
+<!-- ASSETS TABLE -->
+<section class="assets">
+  <div class="section-label">Assets running now</div>
+  <table class="asset-table">
+    <thead>
+      <tr>
+        <th>Asset</th>
+        <th>Direction</th>
+        <th>Last week net</th>
+        <th>Status</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>MSTR</td><td class="tag-both">LONG</td><td class="pnl-pos">+$616</td><td><span class="dot-active"></span> Live</td></tr>
+      <tr><td>ZEC</td><td class="tag-long">LONG</td><td class="pnl-pos">+$338</td><td><span class="dot-active"></span> Live</td></tr>
+      <tr><td>COIN</td><td class="tag-long">LONG</td><td class="pnl-pos">+$315</td><td><span class="dot-active"></span> Live</td></tr>
+      <tr><td>SOL</td><td class="tag-both">LONG + SHORT</td><td class="pnl-pos">+$142</td><td><span class="dot-active"></span> Live</td></tr>
+      <tr><td>ETH</td><td class="tag-both">LONG + SHORT</td><td class="pnl-pos">+$131</td><td><span class="dot-active"></span> Live</td></tr>
+      <tr><td>ADA</td><td class="tag-long">LONG</td><td class="pnl-pos">+$114</td><td><span class="dot-active"></span> Live</td></tr>
+      <tr><td>HOOD</td><td class="tag-long">LONG</td><td class="pnl-pos">+$83</td><td><span class="dot-active"></span> Live</td></tr>
+      <tr><td>SUI</td><td class="tag-both">LONG + SHORT</td><td class="pnl-pos">+$17</td><td><span class="dot-active"></span> Live</td></tr>
+      <tr><td>TSLA</td><td class="tag-long">LONG</td><td style="color:var(--red)">-$16</td><td><span class="dot-active"></span> Live</td></tr>
+      <tr><td>GOOGL</td><td class="tag-long">LONG</td><td style="color:var(--red)">-$62</td><td><span class="dot-active"></span> Live</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how">
+  <div class="section-label">How it works</div>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">01</div>
+      <div class="step-title">You subscribe</div>
+      <div class="step-desc">Choose your plan. Contact us on Telegram. We add your capital allocation to the bot running on our server. Setup takes less than 24 hours.</div>
+    </div>
+    <div class="step">
+      <div class="step-n">02</div>
+      <div class="step-title">Bot trades daily</div>
+      <div class="step-desc">Every day at NY open (13:00 UTC), the bot detects the breakout direction across your assets, enters automatically, and closes at 22:00 UTC. Zero intervention needed.</div>
+    </div>
+    <div class="step">
+      <div class="step-n">03</div>
+      <div class="step-title">You see results</div>
+      <div class="step-desc">Weekly performance report sent directly to your Telegram. Real PnL, real trades, full transparency. Stop anytime — no lock-in.</div>
+    </div>
+  </div>
+</section>
+
+<!-- PRICING -->
+<section class="pricing" id="pricing">
+  <div class="section-label">Simple pricing</div>
+  <div class="plans">
+    <div class="plan">
+      <div class="plan-name">STARTER</div>
+      <div class="plan-price">€19</div>
+      <div class="plan-period">per month</div>
+      <ul class="plan-features">
+        <li>1 asset class</li>
+        <li>NY open strategy</li>
+        <li>Weekly report</li>
+        <li>Telegram support</li>
+      </ul>
+      <a href="https://t.me/Along1111" target="_blank" class="plan-cta">Get Started</a>
+    </div>
+    <div class="plan featured">
+      <div class="plan-badge">MOST POPULAR</div>
+      <div class="plan-name">PRO</div>
+      <div class="plan-price">€39</div>
+      <div class="plan-period">per month</div>
+      <ul class="plan-features">
+        <li>5 asset classes</li>
+        <li>NY open strategy</li>
+        <li>Daily report</li>
+        <li>Priority support</li>
+        <li>Performance dashboard</li>
+      </ul>
+      <a href="https://t.me/Along1111" target="_blank" class="plan-cta">Get Started</a>
+    </div>
+    <div class="plan">
+      <div class="plan-name">FULL ACCESS</div>
+      <div class="plan-price">€49</div>
+      <div class="plan-period">per month</div>
+      <ul class="plan-features">
+        <li>All 10 asset classes</li>
+        <li>NY open strategy</li>
+        <li>Daily report</li>
+        <li>Direct line to trader</li>
+        <li>Performance dashboard</li>
+        <li>Custom allocation</li>
+      </ul>
+      <a href="https://t.me/Along1111" target="_blank" class="plan-cta">Get Started</a>
+    </div>
+  </div>
+</section>
+
+<!-- DISCLAIMER -->
+<section class="disclaimer">
+  <p>Past performance is not indicative of future results. Trading involves substantial risk of loss. All results shown are from live trading with real capital. Results may vary based on market conditions and capital deployed. Only trade with capital you can afford to lose.</p>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">ALGONY</div>
+  <div class="footer-copy">Contact: @Along1111 on Telegram</div>
+</footer>
+
+</body>
+</html>
